@@ -83,28 +83,33 @@ class ADXL355:
         return t
 
     def get_acc_x(self):
-        return self._get_axe([ADXL355.XDATA3, ADXL355.XDATA2, ADXL355.XDATA1])
+        return self._get_axe(ADXL355.XDATA3)
 
     def get_acc_y(self):
-        return self._get_axe([ADXL355.YDATA3, ADXL355.YDATA2, ADXL355.YDATA1])
+        return self._get_axe(ADXL355.YDATA3)
 
     def get_acc_z(self):
-        return self._get_axe([ADXL355.ZDATA3, ADXL355.ZDATA2, ADXL355.ZDATA1])
+        return self._get_axe(ADXL355.ZDATA3)
 
+    def _two_comp(self, val):
+        if (0x80000 & val):
+            val = val - (1 << 8)        # compute negative value
+
+        return val    
+    
     def _get_axe(self, request):
         # Reading data
-        raw = self.read_multiple_data(request)
+        raw = self.read(request, 3)
 
-        a = raw[0]
+        high = raw[0] << 12
 
-        b = raw[1]
+        mid = raw[1] << 4
 
-        c = raw[2]
+        low = raw[2] >> 4
 
-        result = (a << 12) + (b << 4) + (c >> 4)
+        result = high | mid | low
 
-        if result & 0x80000 == 0x80000:
-            result = result | 0xFFF00000
+        result = self._two_comp(result)
 
         if self.range == ADXL355.RANGE_2G:
             result /= 256000

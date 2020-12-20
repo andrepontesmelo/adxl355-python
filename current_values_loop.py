@@ -5,16 +5,26 @@ import sys
 
 device = ADXL355(1, 2)
 
+# first_x = device.get_acc_x()
+# first_y = device.get_acc_y()
+# first_z = device.get_acc_z()
+
+first_x = 3.66521484375
+first_y = 4.089890625
+first_z = 3.15569921875
+
 while True:
-    # x = device.get_acc_x()
-    # y = device.get_acc_y()
-    # z = device.get_acc_z()
-    # temp = device.get_temp()
+    print("ID: {:X}".format(device.get_devid()))
+    print(f'TEMP: \t {device.get_temp()}')
+    
+    x = device.get_acc_x() 
+    y = device.get_acc_y() 
+    z = device.get_acc_z() 
+    
+    print(f'X: {round(abs(x - first_x), 2)}')
+    print(f'Y: {round(abs(y - first_y), 2)}')
+    print(f'Z: {round(abs(z - first_z), 2)}')
 
-    # print(f'X: {x} \t Y: {y} \t Z:{z} \t TEMP: \t {temp}')
+    print()
 
-#    print("ID: {:X}".format(device.get_devid()))
-    #print(f'TEMP: \t {device.get_temp()}')
-    print(f'ACC X: \t {device.get_acc_x()}')
-
-    time.sleep(3)
+    time.sleep(.2)
