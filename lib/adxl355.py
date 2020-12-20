@@ -2,6 +2,8 @@ import spidev
 
 
 class ADXL355:
+    DEVID = 0x00
+
     # SPI config
     SPI_MAX_CLOCK_HZ = 10000000
     SPI_MODE = 0b00
@@ -49,15 +51,15 @@ class ADXL355:
         device_address = address << 1 | ADXL355.WRITE_BIT
         self.spi.xfer2([device_address, value])
 
-    def read_multiple_data(self, address_list):
-        spi_ops = []
+    def read(self, register, length=1):
+        address = (register << 1) | 0b1
+        if length == 1:
+            result = self.spi.xfer2([address, 0x00])
+            return result[1]
+        else:
+            result = self.spi.xfer2([address] + [0x00] * (length))
+            return result[1:]
 
-        for address in address_list:
-            spi_ops.append(address << 1 | ADXL355.READ_BIT)
-
-        spi_ops.append(ADXL355.DUMMY_BYTE)
-
-        return self.spi.xfer2(spi_ops)[1:]
 
     def _set_measure_range(self, measure_range):
         self.write_data(ADXL355.RANGE, measure_range)
@@ -65,15 +67,18 @@ class ADXL355:
     def _enable_measure_mode(self):
         self.write_data(ADXL355.POWER_CTL, ADXL355.MEASURE_MODE)
 
+    def get_devid(self):
+        return self.read(ADXL355.DEVID)
+
     def get_temp(self):
-        t = self.read_multiple_data([(ADXL355.TEMP2, ADXL355.TEMP1)])
+        high = self.read(ADXL355.TEMP2)
+        low = self.read(ADXL355.TEMP1)
 
-        a = t[0] & 0x0000FFFF
-        b = t[1]
+        high = (high & 0b00001111) << 8
 
-        t = (a << 8) + b
+        raw = high + low
 
-        t = (t * 1852 / -9.05) + 25
+        t = ((raw - 1852) / -9.05) + 25
 
         return t
 
@@ -89,10 +94,6 @@ class ADXL355:
     def _get_axe(self, request):
         # Reading data
         raw = self.read_multiple_data(request)
-
-        print('should be the same:')
-        print(raw)
-        print(raw[0:3])
 
         a = raw[0]
 
