@@ -27,7 +27,10 @@ while True:
     print(f'Y: {round(y, 2)}')
     print(f'Z: {round(z, 2)}')
     print(f'sum: {round(sum_acc, 2)}')
+    print(f'fifo samples: {device.get_fifo_valid_samples_count()}')
 
     print()
 
     time.sleep(.2)
+
+    device.get_fifo()

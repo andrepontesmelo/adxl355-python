@@ -24,6 +24,8 @@ class ADXL355:
     RANGE = 0x2C
     POWER_CTL = 0x2D
     SELF_TEST = 0x2E
+    FIFO_ENTRIES = 0x05
+    FIFO_DATA = 0x11
 
     # Data Range
     RANGE_2G = 0x01
@@ -37,14 +39,14 @@ class ADXL355:
     MEASURE_MODE = 0x06  # Only accelerometer
 
     # Settings:
-    SELF_TEST_X_MIN = -0.04
-    SELF_TEST_X_MAX = -0.03
+    SELF_TEST_X_MIN = -0.2
+    SELF_TEST_X_MAX = 0
 
-    SELF_TEST_Y_MIN = 0.19
-    SELF_TEST_Y_MAX = 0.20
+    SELF_TEST_Y_MIN = 0
+    SELF_TEST_Y_MAX = 0.6
 
-    SELF_TEST_Z_MIN = -1.02
-    SELF_TEST_Z_MAX = -0.99
+    SELF_TEST_Z_MIN = -1.1
+    SELF_TEST_Z_MAX = 1.3
 
     def __init__(self, bus, device, measure_range=RANGE_2G):
         # SPI init
@@ -76,16 +78,16 @@ class ADXL355:
         print(f'Accelerometer: SELF TEST Z: {z}')
 
         ok = True
-        if x < ADXL355.SELF_TEST_X_MIN or x > ADXL355.SELF_TEST_X_MAX:
-            print(f'Accelerometer: Error - X out of test range')
+        if not (ADXL355.SELF_TEST_X_MIN <= x <= ADXL355.SELF_TEST_X_MAX):
+            print(f'Accelerometer: Error - X out of test range: {ADXL355.SELF_TEST_X_MIN} <= {x} <= {ADXL355.SELF_TEST_X_MAX}')
             ok = False
 
-        if y < ADXL355.SELF_TEST_Y_MIN or x > ADXL355.SELF_TEST_Y_MAX:
-            print(f'Accelerometer: Error - Y out of test range')
+        if not (ADXL355.SELF_TEST_Y_MIN <= y <= ADXL355.SELF_TEST_Y_MAX):
+            print(f'Accelerometer: Error - Y out of test range: {ADXL355.SELF_TEST_Y_MIN} <= {y} <= {ADXL355.SELF_TEST_Y_MAX}')
             ok = False
 
-        if z < ADXL355.SELF_TEST_Z_MIN or z > ADXL355.SELF_TEST_Z_MAX:
-            print(f'Accelerometer: Error - Z out of test range')
+        if not (ADXL355.SELF_TEST_Z_MIN <= z <= ADXL355.SELF_TEST_Z_MAX):
+            print(f'Accelerometer: Error - Z out of test range: {ADXL355.SELF_TEST_Z_MIN} <= {z} <= {ADXL355.SELF_TEST_Z_MAX}')
             ok = False
 
         self.self_test_off()
@@ -157,16 +159,19 @@ class ADXL355:
         # Reading data
         raw = self.read(request, 3)
 
-        high = raw[0] << 12
-        
-        mid = raw[1] << 4
+        return self._three_bytes_to_acc(raw, 0)
 
-        low = raw[2] >> 4
+    def _three_bytes_to_acc(self, array, idx):
+        print(f'will access idx: {idx}. Len = {len(array)}')
+        high = array[idx] << 12
+        
+        mid = array[idx + 1] << 4
+
+        low = array[idx + 2] >> 4
 
         result = high | mid | low
 
         result = self._two_comp(result)
-
 
         if self.range == ADXL355.RANGE_2G:
             result /= 256000
@@ -178,3 +183,30 @@ class ADXL355:
             raise Exception('Invalid Range')
 
         return result
+
+    def get_fifo_valid_samples_count(self):
+        count = self.read(ADXL355.FIFO_ENTRIES)
+        return count
+
+    def get_fifo(self):
+        fifo = []
+        count = self.read(ADXL355.FIFO_ENTRIES)
+
+        array = self.read(ADXL355.FIFO_DATA, 3 * count)
+
+        idx = 0
+
+        for i in range(count // 3):
+            print(f'i = {i}')
+            x = self._three_bytes_to_acc(array, idx)
+            idx += 3
+
+            y = self._three_bytes_to_acc(array, idx)
+            idx += 3
+            
+            z = self._three_bytes_to_acc(array, idx)
+            idx += 3
+
+            fifo.append([x,y,z])
+
+        return fifo
