@@ -3,7 +3,7 @@ from lib.adxl355 import ADXL355
 import time
 import sys
 
-device = ADXL355(1, 2)
+device = ADXL355(1, 2, ADXL355.RANGE_2G)
 
 # first_x = device.get_acc_x()
 # first_y = device.get_acc_y()

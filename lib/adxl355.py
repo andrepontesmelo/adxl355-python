@@ -73,10 +73,12 @@ class ADXL355:
     def get_temp(self):
         high = self.read(ADXL355.TEMP2)
         low = self.read(ADXL355.TEMP1)
+        #print(f'high = {bin(high)}')
+        #print(f' low = {bin(low)}')
 
         high = (high & 0b00001111) << 8
 
-        raw = high + low
+        raw = high | low
 
         t = ((raw - 1852) / -9.05) + 25
 
@@ -91,18 +93,21 @@ class ADXL355:
     def get_acc_z(self):
         return self._get_axe(ADXL355.ZDATA3)
 
-    def _two_comp(self, val):
-        if (0x80000 & val):
-            val = val - (1 << 8)        # compute negative value
+    def _two_comp(self, value):
+        if (0x80000 & value):
+            return - (0x0100000 - value)
+        
+        return value
+         
+    def print_bin(self, num):
+        print(bin(num))
 
-        return val    
-    
     def _get_axe(self, request):
         # Reading data
         raw = self.read(request, 3)
 
         high = raw[0] << 12
-
+        
         mid = raw[1] << 4
 
         low = raw[2] >> 4
@@ -110,6 +115,7 @@ class ADXL355:
         result = high | mid | low
 
         result = self._two_comp(result)
+
 
         if self.range == ADXL355.RANGE_2G:
             result /= 256000
