@@ -2,6 +2,7 @@ import spidev
 
 
 class ADXL355:
+    # Metainfo
     DEVID = 0x00
 
     # SPI config
@@ -22,6 +23,7 @@ class ADXL355:
     TEMP1 = 0x07
     RANGE = 0x2C
     POWER_CTL = 0x2D
+    SELF_TEST = 0x2E
 
     # Data Range
     RANGE_2G = 0x01
@@ -33,6 +35,16 @@ class ADXL355:
     WRITE_BIT = 0x00
     DUMMY_BYTE = 0xAA
     MEASURE_MODE = 0x06  # Only accelerometer
+
+    # Settings:
+    SELF_TEST_X_MIN = -0.04
+    SELF_TEST_X_MAX = -0.03
+
+    SELF_TEST_Y_MIN = 0.19
+    SELF_TEST_Y_MAX = 0.20
+
+    SELF_TEST_Z_MIN = -1.02
+    SELF_TEST_Z_MAX = -0.99
 
     def __init__(self, bus, device, measure_range=RANGE_2G):
         # SPI init
@@ -46,6 +58,45 @@ class ADXL355:
         self._enable_measure_mode()
 
         self.range = measure_range
+
+        ok = self.self_test()
+        
+        if not ok:
+            print(f'Accelerometer: Self test not ok. Will not initialize.')
+            self.spi = None
+
+    def self_test(self):
+        self.write_data(ADXL355.SELF_TEST, 0b11)
+        x = self.get_acc_x()
+        y = self.get_acc_y()
+        z = self.get_acc_z()
+
+        print(f'Accelerometer: SELF TEST X: {x}')
+        print(f'Accelerometer: SELF TEST Y: {y}')
+        print(f'Accelerometer: SELF TEST Z: {z}')
+
+        ok = True
+        if x < ADXL355.SELF_TEST_X_MIN or x > ADXL355.SELF_TEST_X_MAX:
+            print(f'Accelerometer: Error - X out of test range')
+            ok = False
+
+        if y < ADXL355.SELF_TEST_Y_MIN or x > ADXL355.SELF_TEST_Y_MAX:
+            print(f'Accelerometer: Error - Y out of test range')
+            ok = False
+
+        if z < ADXL355.SELF_TEST_Z_MIN or z > ADXL355.SELF_TEST_Z_MAX:
+            print(f'Accelerometer: Error - Z out of test range')
+            ok = False
+
+        self.self_test_off()
+
+        return ok
+
+    def self_test_on(self):
+        self.write_data(ADXL355.SELF_TEST, 0b11)
+
+    def self_test_off(self):
+        self.write_data(ADXL355.SELF_TEST, 0b00)
 
     def write_data(self, address, value):
         device_address = address << 1 | ADXL355.WRITE_BIT
